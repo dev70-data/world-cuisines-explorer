@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Cuisines Explorer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+        }
+        .pulse { animation: pulse 2s infinite; }
+        
+        .card-hover:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .chip { padding: 0.25rem 0.6rem; border-radius: 9999px; font-size: 0.85rem; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-white">
+    
+    <!-- Header -->
+    <header class="p-6 border-b border-white/10 backdrop-blur-lg bg-white/5 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex items-center justify-between gap-6">
+            <div>
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-pink-500 bg-clip-text text-transparent mb-2">
+                    🌍 World Cuisines Explorer
+                </h1>
+                <p class="text-gray-300">Discover recipes, watch tutorials & learn culinary history</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <input id="search" type="search" placeholder="Search cuisines or dishes..." class="bg-white/5 placeholder:text-gray-400 px-4 py-2 rounded-xl border border-white/10 outline-none" />
+                <select id="filterDifficulty" class="bg-white/5 px-3 py-2 rounded-xl border border-white/10">
+                    <option value="all">All Difficulties</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-6">
+        <!-- Cuisine Cards Grid -->
+        <div id="cuisineGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Cards will be inserted here by JavaScript -->
+        </div>
+    </main>
+
+    <!-- Modal for Cuisine Details -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl max-w-5xl w-full border border-white/20 my-8">
+            <!-- Close Button -->
+            <div class="p-6 border-b border-white/10 flex justify-between items-center">
+                <h2 id="modalTitle" class="text-3xl font-bold"></h2>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white text-4xl leading-none">&times;</button>
+            </div>
+
+            <!-- Dish selector (adds more dishes per cuisine) -->
+            <div id="dishSelector" class="p-4 flex gap-3 overflow-x-auto border-b border-white/10"></div>
+
+            <!-- Tab Navigation -->
+            <div class="flex border-b border-white/10">
+                <button onclick="showTab('overview')" id="tab-overview" class="flex-1 px-6 py-4 font-semibold border-b-2 border-purple-500 bg-white/5">
+                    📖 Overview
+                </button>
+                <button onclick="showTab('recipe')" id="tab-recipe" class="flex-1 px-6 py-4 font-semibold border-b-2 border-transparent hover:bg-white/5">
+                    👨‍🍳 Recipe
+                </button>
+                <button onclick="showTab('video')" id="tab-video" class="flex-1 px-6 py-4 font-semibold border-b-2 border-transparent hover:bg-white/5">
+                    🎥 Video
+                </button>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-8">
+                <!-- Overview Tab -->
+                <div id="content-overview" class="slide-in">
+                    <div id="overviewContent"></div>
+                </div>
+
+                <!-- Recipe Tab -->
+                <div id="content-recipe" class="hidden">
+                    <div id="recipeContent"></div>
+                </div>
+
+                <!-- Video Tab -->
+                <div id="content-video" class="hidden">
+                    <div id="videoContent" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Expanded cuisine data with additional dishes, flavour profiles and video tutorials
+        const cuisines = [
+            {
+                id: 1,
+                name: "Italian",
+                icon: "🍝",
+                color: "from-green-500 to-red-500",
+                signature: "Pasta Carbonara",
+                description: "Italian cuisine is renowned for its regional diversity and simple, quality ingredients.",
+                history: "Italian cuisine dates back to 4th century BC with ancient Rome...",
+                funFact: "There are over 350 different pasta shapes in Italy, each designed for specific sauces!",
+                dishes: [
+                    {
+                        name: "Pasta Carbonara",
+                        spiceLevel: 1,
+                        flavour: "Creamy, savory, umami-forward",
+                        cookTime: "30 mins",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: [
+                            "400g Spaghetti",
+                            "200g Guanciale (or Pancetta)",
+                            "4 large Egg Yolks",
+                            "100g Pecorino Romano cheese",
+                            "Black Pepper (freshly ground)",
+                            "Salt"
+                        ],
+                        steps: [
+                            "Bring a large pot of salted water to boil. Cook spaghetti until al dente.",
+                            "While pasta cooks, cut guanciale into small cubes and crisp in a large pan over medium heat.",
+                            "In a bowl, whisk egg yolks with grated pecorino cheese and lots of freshly ground black pepper.",
+                            "Reserve 1 cup of pasta cooking water before draining the pasta.",
+                            "Add the hot drained pasta to the pan with guanciale (remove from heat).",
+                            "Quickly add the egg mixture while tossing constantly. Add pasta water gradually to create a creamy sauce.",
+                            "Serve immediately with extra pecorino cheese and black pepper on top."
+                        ],
+                        videoId: "3AAdKl1UYZs"
+                    },
+                    {
+                        name: "Margherita Pizza",
+                        spiceLevel: 1,
+                        flavour: "Fresh, tangy tomato & basil",
+                        cookTime: "1 hr",
+                        servings: 2,
+                        difficulty: "Easy",
+                        ingredients: ["Pizza dough","Tomato passata","Fresh mozzarella","Fresh basil","Olive oil","Salt"],
+                        steps: ["Stretch dough into a round base.","Spread passata, top with sliced mozzarella, basil, and a drizzle of olive oil.","Bake in a very hot oven until crust is blistered and cheese melted."],
+                        videoId: "xKDnD8sJsuY"
+                    },
+                    {
+                        name: "Risotto alla Milanese",
+                        spiceLevel: 1,
+                        flavour: "Rich, buttery, saffron aroma",
+                        cookTime: "40 mins",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["Arborio rice","Saffron threads","Butter","Parmesan","White wine","Chicken/vegetable stock","Onion"],
+                        steps: ["Sweat onions, toast rice, deglaze with wine.","Gradually add warm stock while stirring until creamy.","Finish with butter, parmesan and saffron."],
+                        videoId: "ZiB-YUSZq6Q"
+                    }
+                ]
+            },
+            {
+                id: 2,
+                name: "Japanese",
+                icon: "🍱",
+                color: "from-red-400 to-pink-300",
+                signature: "Sushi",
+                description: "Japanese cuisine emphasizes seasonality, quality ingredients, and beautiful presentation.",
+                history: "Japanese cuisine has evolved over 2,000 years...",
+                funFact: "It takes 10+ years of training to become a master sushi chef in Japan!",
+                dishes: [
+                    {
+                        name: "Sushi (Maki)",
+                        spiceLevel: 1,
+                        flavour: "Delicate, vinegary rice with fresh fish",
+                        cookTime: "45 mins",
+                        servings: 2,
+                        difficulty: "Hard",
+                        ingredients: ["Sushi rice","Rice vinegar","Nori sheets","Fresh fish","Wasabi","Soy sauce"],
+                        steps: ["Cook and season rice, cool to room temperature.","Place nori on mat, spread rice, add fillings, roll tightly and slice."],
+                        videoId: "nIoOv6lWYnk"
+                    },
+                    {
+                        name: "Tonkatsu",
+                        spiceLevel: 2,
+                        flavour: "Crispy, savory with tangy sauce",
+                        cookTime: "35 mins",
+                        servings: 2,
+                        difficulty: "Easy",
+                        ingredients: ["Pork cutlets","Panko","Flour","Eggs","Tonkatsu sauce","Cabbage"],
+                        steps: ["Bread the cutlets with flour, egg, panko and deep fry until golden.","Serve with shredded cabbage and tonkatsu sauce."],
+                        videoId: "VLnZ7tUNVEo"
+                    },
+                    {
+                        name: "Miso Soup",
+                        spiceLevel: 1,
+                        flavour: "Umami-rich, light & comforting",
+                        cookTime: "15 mins",
+                        servings: 4,
+                        difficulty: "Easy",
+                        ingredients: ["Dashi stock","Miso paste","Tofu","Wakame seaweed","Scallions"],
+                        steps: ["Warm dashi, dissolve miso paste off heat, add tofu and wakame, serve hot."],
+                        videoId: "dXc8e0KStRg"
+                    }
+                ]
+            },
+            {
+                id: 3,
+                name: "Mexican",
+                icon: "🌮",
+                color: "from-yellow-400 to-orange-600",
+                signature: "Tacos al Pastor",
+                description: "Mexican cuisine is a vibrant fusion of indigenous Mesoamerican and Spanish cooking.",
+                history: "Mexican cuisine dates back 10,000+ years...",
+                funFact: "Chocolate, vanilla, avocado, and chili peppers all originated in Mexico!",
+                dishes: [
+                    {
+                        name: "Tacos al Pastor",
+                        spiceLevel: 4,
+                        flavour: "Smoky, sweet, tangy with charred pineapple",
+                        cookTime: "40 mins + marination",
+                        servings: 6,
+                        difficulty: "Medium",
+                        ingredients: ["Pork shoulder","Achiote paste","Dried chilies","Pineapple","Corn tortillas","Onion","Cilantro"],
+                        steps: ["Rehydrate chilies, blend marinade, marinate pork, cook on high heat until caramelised, assemble tacos with pineapple."],
+                        videoId: "PnNyQ8VjoOk"
+                    },
+                    {
+                        name: "Mole Poblano",
+                        spiceLevel: 3,
+                        flavour: "Complex, chocolatey, nutty, slightly spicy",
+                        cookTime: "2 hours",
+                        servings: 6,
+                        difficulty: "Hard",
+                        ingredients: ["Dried chilies","Chocolate","Nuts","Spices","Tortilla","Chicken"],
+                        steps: ["Toast and blend ingredients into a rich sauce, simmer with chicken until flavors marry."],
+                        videoId: "OS9OKj_y1EA"
+                    },
+                    {
+                        name: "Guacamole",
+                        spiceLevel: 2,
+                        flavour: "Fresh, creamy with lime and cilantro",
+                        cookTime: "10 mins",
+                        servings: 4,
+                        difficulty: "Easy",
+                        ingredients: ["Ripe avocados","Lime","Onion","Cilantro","Salt","Tomato (optional)"],
+                        steps: ["Mash avocados, mix with finely chopped onion, cilantro, lime, and salt. Serve fresh."],
+                        videoId: "tHVzFLtvbGQ"
+                    }
+                ]
+            },
+            {
+                id: 4,
+                name: "Indian",
+                icon: "🍛",
+                color: "from-orange-500 to-pink-600",
+                signature: "Butter Chicken",
+                description: "Indian cuisine offers incredible diversity with complex spice blends and aromatic dishes.",
+                history: "Indian cuisine spans 5,000+ years...",
+                funFact: "India produces and consumes 70% of the world's spices!",
+                dishes: [
+                    {
+                        name: "Butter Chicken",
+                        spiceLevel: 3,
+                        flavour: "Rich, creamy, slightly sweet and aromatic",
+                        cookTime: "50 mins",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["600g Chicken Thighs","1 cup Plain Yogurt","400g Tomato Puree","200ml Heavy Cream","4 tbsp Butter","Garam Masala"],
+                        steps: ["Marinate chicken in spiced yogurt, grill or pan-fry until charred, simmer in tomato-based buttery gravy, add cream and fenugreek."],
+                        videoId: "uHgCYeXdRVI"
+                    },
+                    {
+                        name: "Masala Dosa",
+                        spiceLevel: 2,
+                        flavour: "Light, tangy dosa with spiced potato filling",
+                        cookTime: "1 hr (incl. batter resting)",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["Dosa batter","Potatoes","Mustard seeds","Curry leaves","Turmeric"],
+                        steps: ["Prepare and ferment batter, cook crispy dosa on hot griddle, stuff with lightly spiced potato masala."],
+                        videoId: "CCab5oh0ZOc"
+                    },
+                    {
+                        name: "Chole Bhature",
+                        spiceLevel: 4,
+                        flavour: "Spicy, tangy chickpea curry with fluffy fried bread",
+                        cookTime: "45 mins",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["Chickpeas","Onion","Tomato","Bhature dough","Garam masala"],
+                        steps: ["Cook chickpeas in spiced gravy; roll and deep-fry bhature, serve piping hot."],
+                        videoId: "M-ohmJswy6A"
+                    }
+                ]
+            },
+            {
+                id: 5,
+                name: "Thai",
+                icon: "🍜",
+                color: "from-lime-400 to-green-600",
+                signature: "Pad Thai",
+                description: "Thai cuisine perfectly balances sweet, sour, salty, bitter, and spicy flavors.",
+                history: "Thai cuisine evolved over centuries...",
+                funFact: "Pad Thai was created in the 1930s as part of a national identity campaign!",
+                dishes: [
+                    {
+                        name: "Pad Thai",
+                        spiceLevel: 3,
+                        flavour: "Sweet, sour, salty with crunchy peanuts",
+                        cookTime: "25 mins",
+                        servings: 2,
+                        difficulty: "Medium",
+                        ingredients: ["Flat rice noodles","Shrimp","Eggs","Bean sprouts","Tamarind paste","Fish sauce","Palm sugar"],
+                        steps: ["Soak noodles, prepare sauce, stir-fry shrimp and eggs, add noodles and sauce, finish with sprouts and peanuts."],
+                        videoId: "ZXHsK6EhlkU"
+                    },
+                    {
+                        name: "Green Curry",
+                        spiceLevel: 5,
+                        flavour: "Creamy, spicy and fragrant from green curry paste",
+                        cookTime: "30 mins",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["Green curry paste","Coconut milk","Chicken/Tofu","Thai basil","Fish sauce"],
+                        steps: ["Fry paste in a little oil, add coconut milk, simmer with protein and vegetables, finish with basil."],
+                        videoId: "LIbKVpBQKJI"
+                    },
+                    {
+                        name: "Som Tum (Papaya Salad)",
+                        spiceLevel: 4,
+                        flavour: "Spicy, tangy and crunchy",
+                        cookTime: "15 mins",
+                        servings: 2,
+                        difficulty: "Easy",
+                        ingredients: ["Green papaya","Fish sauce","Lime","Chilies","Peanuts","Garlic"],
+                        steps: ["Pound ingredients in a mortar and pestle, adjust seasoning, serve immediately."],
+                        videoId: "Wvv0dqZ_xa4"
+                    }
+                ]
+            },
+            {
+                id: 6,
+                name: "French",
+                icon: "🥐",
+                color: "from-blue-400 to-purple-500",
+                signature: "Coq au Vin",
+                description: "French cuisine is the foundation of classical Western cooking techniques.",
+                history: "French cuisine developed over centuries...",
+                funFact: "The word 'restaurant' comes from French, meaning 'to restore' or 'to refresh'!",
+                dishes: [
+                    {
+                        name: "Coq au Vin",
+                        spiceLevel: 1,
+                        flavour: "Rich, deep, wine-braised savory",
+                        cookTime: "2 hours",
+                        servings: 4,
+                        difficulty: "Hard",
+                        ingredients: ["Whole chicken","Red wine","Bacon","Mushrooms","Pearl onions","Thyme"],
+                        steps: ["Brown chicken and bacon, braise in wine and stock with aromatics until tender, reduce sauce and serve."],
+                        videoId: "IZ_ZPH2MePg"
+                    },
+                    {
+                        name: "Ratatouille",
+                        spiceLevel: 1,
+                        flavour: "Herby, vegetable-forward",
+                        cookTime: "1 hr",
+                        servings: 4,
+                        difficulty: "Easy",
+                        ingredients: ["Eggplant","Zucchini","Tomato","Bell peppers","Herbs de Provence"],
+                        steps: ["Layer or stew vegetables with tomato base until tender and flavoured."],
+                        videoId: "CcmmofBJHxI"
+                    },
+                    {
+                        name: "Crème Brûlée",
+                        spiceLevel: 0,
+                        flavour: "Sweet, creamy custard with caramelized sugar top",
+                        cookTime: "1 hr",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["Cream","Egg yolks","Sugar","Vanilla pod"],
+                        steps: ["Bake custard in water bath, cool, then torch sugar to form a hard caramel crust."],
+                        videoId: "6tSdlo0r0Io"
+                    }
+                ]
+            },
+            {
+                id: 7,
+                name: "Greek",
+                icon: "🥙",
+                color: "from-cyan-400 to-blue-600",
+                signature: "Moussaka",
+                description: "Greek cuisine emphasizes fresh vegetables, olive oil, and Mediterranean flavors.",
+                history: "Greek cuisine is one of the oldest in the world...",
+                funFact: "Greeks consume more olive oil per capita than any other country in the world!",
+                dishes: [
+                    {
+                        name: "Moussaka",
+                        spiceLevel: 2,
+                        flavour: "Savory layers with creamy béchamel",
+                        cookTime: "90 mins",
+                        servings: 6,
+                        difficulty: "Medium",
+                        ingredients: ["Eggplants","Ground lamb","Potatoes","Béchamel","Tomato"],
+                        steps: ["Salt and roast eggplants, prepare meat sauce, layer with potatoes and béchamel, bake until golden."],
+                        videoId: "Z_GcsR7Q99s"
+                    },
+                    {
+                        name: "Greek Salad",
+                        spiceLevel: 0,
+                        flavour: "Fresh, briny from olives and feta",
+                        cookTime: "10 mins",
+                        servings: 4,
+                        difficulty: "Easy",
+                        ingredients: ["Tomato","Cucumber","Feta","Olives","Olive oil","Oregano"],
+                        steps: ["Chop and toss all ingredients with olive oil and oregano."],
+                        videoId: "kwq4vl610iY"
+                    }
+                ]
+            },
+            {
+                id: 8,
+                name: "Chinese",
+                icon: "🥟",
+                color: "from-red-600 to-yellow-500",
+                signature: "Peking Duck",
+                description: "Chinese cuisine spans thousands of years with eight distinct regional styles.",
+                history: "Chinese cuisine dates back over 5,000 years...",
+                funFact: "Fortune cookies were invented in California, not China!",
+                dishes: [
+                    {
+                        name: "Peking Duck",
+                        spiceLevel: 1,
+                        flavour: "Crispy skin, savory meat",
+                        cookTime: "3 hours",
+                        servings: 4,
+                        difficulty: "Hard",
+                        ingredients: ["Whole duck","Maltose syrup","Five-spice powder","Pancakes","Hoisin"],
+                        steps: ["Blanch and air-dry duck for crisp skin, glaze and roast at high heat, carve thinly and serve with pancakes."],
+                        videoId: "KnJ3abXjgME"
+                    },
+                    {
+                        name: "Mapo Tofu",
+                        spiceLevel: 5,
+                        flavour: "Numbing, spicy, umami (Sichuan)",
+                        cookTime: "30 mins",
+                        servings: 4,
+                        difficulty: "Medium",
+                        ingredients: ["Tofu","Ground pork","Doubanjiang","Sichuan peppercorns","Garlic","Ginger"],
+                        steps: ["Brown pork, add bean paste, cook tofu gently in sauce, finish with toasted peppercorn oil."],
+                        videoId: "3XSXygYEJos"
+                    }
+                ]
+            }
+        ];
+
+        let currentCuisine = null;
+        let currentDishIndex = 0;
+
+        // Utility: render spice as emoji chips
+        function renderSpice(level) {
+            if (!level || level <= 0) return 'No heat';
+            return '🌶️'.repeat(level) + (level >= 4 ? ' (Hot)' : '');
+        }
+
+        // Generate Cuisine Cards
+        function generateCards(list = cuisines) {
+            const grid = document.getElementById('cuisineGrid');
+            grid.innerHTML = '';
+            list.forEach(cuisine => {
+                const signatureDish = cuisine.dishes && cuisine.dishes[0] ? cuisine.dishes[0] : { name: cuisine.signature, cookTime: '—', spiceLevel: 0 };
+                const card = document.createElement('div');
+                card.className = 'bg-white/5 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden card-hover cursor-pointer';
+                card.onclick = () => openModal(cuisine, 0);
+                card.innerHTML = `
+                    <div class="bg-gradient-to-br ${cuisine.color} p-6 text-center">
+                        <div class="text-6xl mb-3">${cuisine.icon}</div>
+                        <h3 class="text-2xl font-bold">${cuisine.name}</h3>
+                        <p class="text-sm opacity-90">Cuisine</p>
+                    </div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-yellow-400">⭐</span>
+                            <span class="font-semibold">${signatureDish.name}</span>
+                        </div>
+                        <p class="text-gray-300 text-sm mb-4">${cuisine.description}</p>
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="bg-purple-500/20 px-3 py-1 rounded-full">⏱️ ${signatureDish.cookTime || '—'}</span>
+                            <span class="bg-pink-500/20 px-3 py-1 rounded-full">🔥 ${renderSpice(signatureDish.spiceLevel)}</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Open Modal with selected cuisine and dish index
+        function openModal(cuisine, dishIndex = 0) {
+            currentCuisine = cuisine;
+            currentDishIndex = dishIndex;
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modalTitle').textContent = `${cuisine.icon} ${cuisine.name} Cuisine`;
+            buildDishSelector();
+            showTab('overview');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function buildDishSelector() {
+            const selector = document.getElementById('dishSelector');
+            selector.innerHTML = '';
+            (currentCuisine.dishes || []).forEach((dish, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `chip ${idx === currentDishIndex ? 'bg-white/10 border border-purple-500' : 'bg-white/5'} text-sm text-white/90`; 
+                btn.style.minWidth = '140px';
+                btn.innerHTML = `<div class="font-semibold">${dish.name}</div><div class="text-xs text-gray-300">${dish.cookTime} • ${renderSpice(dish.spiceLevel)}</div>`;
+                btn.onclick = () => { currentDishIndex = idx; buildDishSelector(); showTab('overview'); };
+                selector.appendChild(btn);
+            });
+        }
+
+        // Close Modal
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Show Tab
+        function showTab(tabName) {
+            // Hide all content
+            document.querySelectorAll('[id^="content-"]').forEach(el => el.classList.add('hidden'));
+            // Remove active state from all tabs
+            document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+                tab.classList.remove('border-purple-500', 'bg-white/5');
+                tab.classList.add('border-transparent');
+            });
+            // Show selected content
+            const contentEl = document.getElementById(`content-${tabName}`);
+            if (contentEl) contentEl.classList.remove('hidden');
+            // Activate selected tab
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            if (activeTab) {
+                activeTab.classList.add('border-purple-500', 'bg-white/5');
+                activeTab.classList.remove('border-transparent');
+            }
+            // Load content
+            if (tabName === 'overview') loadOverview();
+            if (tabName === 'recipe') loadRecipe();
+            if (tabName === 'video') loadVideo();
+        }
+
+        // Load Overview Content
+        function loadOverview() {
+            const content = document.getElementById('overviewContent');
+            const c = currentCuisine;
+            const d = (c.dishes && c.dishes[currentDishIndex]) || {};
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <div class="bg-gradient-to-br ${c.color} p-6 rounded-2xl text-center">
+                        <div class="text-7xl mb-3">${c.icon}</div>
+                        <h3 class="text-3xl font-bold mb-2">${d.name}</h3>
+                        <p class="opacity-90">${d.flavour}</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-white/5 rounded-xl p-4 text-center">
+                            <div class="text-3xl mb-2">⏱️</div>
+                            <div class="text-sm text-gray-400">Cook Time</div>
+                            <div class="font-bold text-lg">${d.cookTime}</div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-4 text-center">
+                            <div class="text-3xl mb-2">👥</div>
+                            <div class="text-sm text-gray-400">Servings</div>
+                            <div class="font-bold text-lg">${d.servings}</div>
+                        </div>
+                        <div class="bg-white/5 rounded-xl p-4 text-center">
+                            <div class="text-3xl mb-2">🔥</div>
+                            <div class="text-sm text-gray-400">Spice Level</div>
+                            <div class="font-bold text-lg">${renderSpice(d.spiceLevel)}</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/5 rounded-2xl p-6">
+                        <h4 class="text-xl font-bold mb-3 flex items-center gap-2">📚 Culinary History</h4>
+                        <p class="text-gray-300 leading-relaxed">${c.history}</p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 rounded-2xl p-6">
+                        <h4 class="text-xl font-bold mb-3 flex items-center gap-2">💡 Fun Fact</h4>
+                        <p class="text-gray-300">${c.funFact}</p>
+                    </div>
+
+                    <div class="bg-white/5 rounded-xl p-4">
+                        <h4 class="text-lg font-semibold mb-2">Other dishes in ${c.name} cuisine</h4>
+                        <div class="flex flex-wrap gap-3">
+                            ${(c.dishes || []).map((other, idx) => `
+                                <button onclick="currentDishIndex=${idx}; buildDishSelector(); showTab('overview')" class="px-3 py-2 bg-white/5 rounded-lg text-sm">${other.name}</button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Load Recipe Content
+        function loadRecipe() {
+            const content = document.getElementById('recipeContent');
+            const d = (currentCuisine.dishes && currentCuisine.dishes[currentDishIndex]) || {};
+            content.innerHTML = `
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-white/5 rounded-2xl p-6">
+                        <h3 class="text-2xl font-bold mb-3">Ingredients</h3>
+                        <ul class="list-disc pl-5 text-gray-300">${(d.ingredients || []).map(i => `<li>${i}</li>`).join('')}</ul>
+                    </div>
+                    <div class="bg-white/5 rounded-2xl p-6">
+                        <h3 class="text-2xl font-bold mb-3">Steps</h3>
+                        <ol class="list-decimal pl-5 text-gray-300">${(d.steps || []).map(s => `<li class="mb-2">${s}</li>`).join('')}</ol>
+                    </div>
+                </div>
+                <div class="mt-6 bg-white/5 rounded-2xl p-6">
+                    <h4 class="font-semibold mb-2">Tips & Variations</h4>
+                    <ul class="text-gray-300 list-disc pl-5">
+                        <li>Adjust spice level by adding or reducing chilies according to taste.</li>
+                        <li>Substitute ingredients (e.g. pancetta for guanciale) when authentic items are unavailable.</li>
+                        <li>For more texture, try adding roasted vegetables or nuts where appropriate.</li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        // Load Video Content
+        function loadVideo() {
+            const content = document.getElementById('videoContent');
+            const d = (currentCuisine.dishes && currentCuisine.dishes[currentDishIndex]) || {};
+            content.innerHTML = `
+                <div class="bg-white/5 rounded-2xl p-4">
+                    <h3 class="text-xl font-bold mb-4">Tutorial: ${d.name}</h3>
+                    <div class="aspect-video rounded-lg overflow-hidden">
+                        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/${d.videoId}?rel=0" title="${d.name} tutorial" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Search and filter
+        document.getElementById('search').addEventListener('input', (e) => {
+            applyFilters();
+        });
+        document.getElementById('filterDifficulty').addEventListener('change', () => applyFilters());
+
+        function applyFilters() {
+            const q = document.getElementById('search').value.toLowerCase().trim();
+            const diff = document.getElementById('filterDifficulty').value;
+            const filtered = cuisines.filter(c => {
+                // match cuisine name or any dish name or description
+                const matchesQuery = c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q) || (c.dishes || []).some(d => (d.name + ' ' + (d.flavour||'')).toLowerCase().includes(q));
+                let matchesDiff = true;
+                if (diff !== 'all') {
+                    matchesDiff = (c.dishes || []).some(d => d.difficulty === diff);
+                }
+                return matchesQuery && matchesDiff;
+            });
+            generateCards(filtered);
+        }
+
+        // Initialize
+        generateCards();
+
+        // Close modal when clicking outside content
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') closeModal();
+        });
+
+    </script>
+</body>
+</html>
